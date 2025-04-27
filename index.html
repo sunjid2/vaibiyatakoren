@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <title>Vai Biyata Koren</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #f7f7f7;
+            font-family: Arial, sans-serif;
+        }
+
+        #game {
+            position: relative;
+            width: 960px; /* 16:9 রেশিও */
+            height: 540px;
+            margin: 50px auto;
+            background: url('https://i.postimg.cc/cCXrr1JC/20250427-091304.jpg') no-repeat center center;
+            background-size: cover;
+            overflow: hidden;
+            border: 2px solid #333;
+        }
+
+        #character {
+            position: absolute;
+            width: 90px;
+            height: 140px;
+            bottom: 0;
+            left: 70px;
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 60px;
+            height: 80px;
+            bottom: 0;
+        }
+
+        #gameOver, #gameWin {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            width: 500px;
+            max-width: 300%;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 26px;
+            font-weight: bold;
+            color: #FFFFFF;
+        }
+
+        #startButton, #restartButton {
+            position: absolute;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            padding: 15px 40px;
+            font-size: 26px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            display: block;
+            transition: background-color 0.3s;
+        }
+
+        #startButton:hover, #restartButton:hover {
+            background-color: #45a049;
+        }
+
+        #restartButton {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game">
+        <img id="character" src="https://i.postimg.cc/vT3dWcfR/20250426-235150.png" alt="Character">
+        <img id="gameOver" src="https://i.postimg.cc/WbYvzqsg/20250426-234849.png" alt="Game Over">
+        <img id="gameWin" src="https://i.postimg.cc/BbBSQ23H/20250427-145417.png" alt="You Win!">
+        <div id="score">0</div>
+        <button id="startButton">Start Game</button>
+        <button id="restartButton">Restart</button>
+
+        <!-- সাউন্ড -->
+        <audio id="bgMusic" src="https://files.catbox.moe/qsdbt4.m4a" loop></audio>
+        <audio id="jumpSound" src="https://files.catbox.moe/neevet.mp3"></audio>
+        <audio id="gameOverSound" src="https://files.catbox.moe/xt21qo.mp3"></audio>
+        <audio id="gameWinSound" src="https://files.catbox.moe/u1avtz.mp3"></audio>
+    </div>
+
+    <script>
+        let isJumping = false;
+        let isGameOver = false;
+        let isGameWin = false;
+        let score = 0;
+
+        const character = document.getElementById("character");
+        const game = document.getElementById("game");
+        const gameOver = document.getElementById("gameOver");
+        const gameWin = document.getElementById("gameWin");
+        const scoreDisplay = document.getElementById("score");
+        const startButton = document.getElementById("startButton");
+        const restartButton = document.getElementById("restartButton");
+
+        const bgMusic = document.getElementById("bgMusic");
+        const jumpSound = document.getElementById("jumpSound");
+        const gameOverSound = document.getElementById("gameOverSound");
+        const gameWinSound = document.getElementById("gameWinSound");
+
+        document.addEventListener("keydown", function(e) {
+            if ((e.code === "Space" || e.code === "ArrowUp") && !isJumping && !isGameOver && !isGameWin) {
+                jump();
+            }
+        });
+        game.addEventListener("click", function() {
+            if (!isJumping && !isGameOver && !isGameWin) {
+                jump();
+            }
+        });
+
+        function jump() {
+            isJumping = true;
+            jumpSound.currentTime = 0;
+            jumpSound.play();
+            let position = 0;
+            let upTimer = setInterval(() => {
+                if (position >= 160) {
+                    clearInterval(upTimer);
+                    let downTimer = setInterval(() => {
+                        if (position <= 0) {
+                            clearInterval(downTimer);
+                            isJumping = false;
+                        }
+                        position -= 5;
+                        character.style.bottom = position + "px";
+                    }, 20);
+                } else {
+                    position += 5;
+                    character.style.bottom = position + "px";
+                }
+            }, 20);
+        }
+
+        function generateObstacle() {
+            if (isGameOver || isGameWin) return;
+
+            const obstacle = document.createElement("div");
+            obstacle.classList.add("obstacle");
+            obstacle.innerHTML = '<img src="https://i.postimg.cc/bwLGgChG/20250426-235603.png" style="width:100%;height:100%;">';
+
+            obstacle.style.left = "960px";
+            game.appendChild(obstacle);
+
+            let obstaclePosition = 960;
+            let moveTimer = setInterval(() => {
+                if (obstaclePosition < -50) {
+                    clearInterval(moveTimer);
+                    obstacle.remove();
+                    score++;
+                    scoreDisplay.textContent = score;
+
+                    if (score >= 100) {
+                        winGame();
+                    }
+                }
+
+                if (
+                    obstaclePosition > 70 && obstaclePosition < 120 &&
+                    parseInt(character.style.bottom) < parseInt(obstacle.offsetHeight)
+                ) {
+                    clearInterval(moveTimer);
+                    loseGame();
+                }
+
+                obstaclePosition -= 5;
+                obstacle.style.left = obstaclePosition + "px";
+            }, 20);
+
+            if (!isGameOver && !isGameWin) {
+                const randomTime = Math.random() * 3000 + 1800;
+                setTimeout(generateObstacle, randomTime);
+            }
+        }
+
+        function startGame() {
+            startButton.style.display = "none";
+            restartButton.style.display = "none";
+            score = 0;
+            isGameOver = false;
+            isGameWin = false;
+            scoreDisplay.textContent = score;
+            document.querySelectorAll(".obstacle").forEach(ob => ob.remove());
+            character.style.bottom = "0px";
+            gameOver.style.display = "none";
+            gameWin.style.display = "none";
+            bgMusic.currentTime = 0;
+            bgMusic.play();
+            generateObstacle();
+        }
+
+        function resetGame() {
+            startGame();
+        }
+
+        function loseGame() {
+            gameOver.style.display = "block";
+            isGameOver = true;
+            restartButton.style.display = "block";
+            bgMusic.pause();
+            gameOverSound.play();
+        }
+
+        function winGame() {
+            gameWin.style.display = "block";
+            isGameWin = true;
+            restartButton.style.display = "block";
+            bgMusic.pause();
+            gameWinSound.play();
+        }
+
+        startButton.addEventListener("click", startGame);
+        restartButton.addEventListener("click", resetGame);
+    </script>
+</body>
+</html>
